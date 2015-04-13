@@ -203,7 +203,7 @@ class KalmanFilter(object):
                self.dim_x, self.dim_x, self._P.shape)
 
 
-    def predict(self, u=0):
+    def predict(self, u=0, Q=None):
         """ Predict next position.
 
         **Parameters**
@@ -212,15 +212,19 @@ class KalmanFilter(object):
             Optional control vector. If non-zero, it is multiplied by B
             to create the control input into the system.
         """
-
+        if Q is None:
+            Q = self._Q
+        elif isscalar(Q):
+            Q = eye(self.dim_x) * Q
+            
         # x = Fx + Bu
         self._x = dot(self._F, self.x) + dot(self._B, u)
 
         # P = FPF' + Q
-        self._P = self._alpha_sq * dot3(self._F, self._P, self._F.T) + self._Q
+        self._P = self._alpha_sq * dot3(self._F, self._P, self._F.T) + Q
 
 
-    def batch_filter(self, zs, Rs=None, update_first=False):
+    def batch_filter(self, zs, Rs=None, Qs=None,  update_first=False):
         """ Batch processes a sequences of measurements.
 
         **Parameters**
@@ -276,7 +280,9 @@ class KalmanFilter(object):
         n = np.size(zs,0)
         if Rs is None:
             Rs = [None]*n
-
+        if Qs is None:
+            Qs = [None]*n
+            
         # mean estimates from Kalman Filter
         if self.x.ndim == 1:
             means   = zeros((n, self.dim_x))
@@ -290,7 +296,7 @@ class KalmanFilter(object):
         covariances_p = zeros((n, self.dim_x, self.dim_x))
 
         if update_first:
-            for i, (z, r) in enumerate(zip(zs, Rs)):
+            for i, (z,q, r) in enumerate(zip(zs,Qs, Rs)):
                 self.update(z, r)
                 means[i,:]         = self._x
                 covariances[i,:,:] = self._P
@@ -299,7 +305,7 @@ class KalmanFilter(object):
                 means_p[i,:]         = self._x
                 covariances_p[i,:,:] = self._P
         else:
-            for i, (z, r) in enumerate(zip(zs, Rs)):
+            for i, (z,q, r) in enumerate(zip(zs,Qs,  Rs)):
                 self.predict()
                 means_p[i,:]         = self._x
                 covariances_p[i,:,:] = self._P
