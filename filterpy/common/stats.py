@@ -40,7 +40,7 @@ def gaussian(x, mean, var):
 
     **Parameters**
 
-    x : scalar
+    x : scalar or array-like
         The value for which we compute the probability
 
     mean : scalar
@@ -54,9 +54,15 @@ def gaussian(x, mean, var):
     probability : float
         probability of x for the Gaussian (mean, var). E.g. 0.101 denotes
         10.1%.
+        
+    **Examples**
+    
+    gaussian(8, 1, 2)
+    gaussian([8, 7, 9], 1, 2)
     """
 
-    return math.exp((-0.5*(x-mean)**2)/var) / math.sqrt(2*math.pi*var)
+    return (np.exp((-0.5*(np.asarray(x)-mean)**2)/var) / 
+            math.sqrt(2*math.pi*var))
 
 
 def mul (mean1, var1, mean2, var2):
@@ -142,6 +148,59 @@ def multivariate_gaussian(x, mu, cov):
         numerator = np.linalg.solve(cov, err).T.dot(err)
 
     return math.exp(-0.5*(norm_coeff + numerator))
+
+
+def multivariate_multiply(m1, c1, m2, c2):
+    """ Multiplies the two multivariate Gaussians together and returns the
+    results as the tuple (mean, covariance).
+
+    **example**
+
+    m, c = multivariate_multiply([7.0, 2], [[1.0, 2.0], [2.0, 1.0]],
+                                 [3.2, 0], [[8.0, 1.1], [1.1,8.0]])
+
+    **Parameters**
+
+    m1 : array-like
+        Mean of first Gaussian. Must be convertable to an 1D array via
+        numpy.asarray(), For example 6, [6], [6, 5], np.array([3, 4, 5, 6])
+        are all valid.
+
+    c1 : matrix-like
+        Mean of first Gaussian. Must be convertable to an 2D array via
+        numpy.asarray().
+
+     m2 : array-like
+        Mean of second Gaussian. Must be convertable to an 1D array via
+        numpy.asarray(), For example 6, [6], [6, 5], np.array([3, 4, 5, 6])
+        are all valid.
+
+    c2 : matrix-like
+        Mean of second Gaussian. Must be convertable to an 2D array via
+        numpy.asarray().
+
+    **Returns**
+
+    m : ndarray
+        mean of the result
+
+    c : ndarray
+        covariance of the result
+    """
+
+    C1 = np.asarray(c1)
+    C2 = np.asarray(c2)
+    M1 = np.asarray(m1)
+    M2 = np.asarray(m2)
+
+    sum_inv = np.linalg.inv(C1+C2)
+    C3 = np.dot(C1, sum_inv).dot(C2)
+
+    M3 = (np.dot(C2, sum_inv).dot(M1) +
+          np.dot(C1, sum_inv).dot(M2))
+
+    return M3, C3
+
 
 
 def plot_gaussian(mean, variance,
@@ -387,7 +446,7 @@ def rand_student_t(df, mu=0, std=1):
     """
     x = random.gauss(0, std)
     y = 2.0*random.gammavariate(0.5*df, 2.0)
-    return x / (math.sqrt(y/df)) + mu  
+    return x / (math.sqrt(y/df)) + mu
 
 
 if __name__ == '__main__':
